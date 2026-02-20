@@ -5,6 +5,23 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const Parser = require("srt-parser-2").default;
 const manifest = require("./manifest");
 
+// Target Language Configuration - Change this to support other languages!
+const LANG_CONFIG = {
+    code: 'tur',              // Stremio language code (ISO 639-2)
+    label: 'TR',             // Short tag shown in the Stremio subtitle list
+    name: 'Turkish',         // Full name of the language (Eng)
+    localName: 'Türkçe',     // Full name of the language (Native)
+    aiInstruction: 'doğal Türkçeye çevirmeli', // Part of system instruction for AI phrasing
+    promptPrefix: 'Aşağıdaki altyazı bloğunu eksiksiz Türkçeye çevir:', // AI prompt prefix
+    translatingMsg: 'Gemini AI şu an çeviriyor', // Status message during translation
+    completedMsg: 'Çeviri Tamamlandı! Lütfen altyazıyı şimdi tekrar seçin.', // Success message
+    refreshMsg: 'Güncel durumu görmek için altyazıyı tekrar seçin!', // Hint to re-select
+    statusHeader: 'Çeviri Durumu', // The header for the progress subtitle
+    infoMsg: '(İlerleme durduysa veya bittiyse: Stremio altyazı listesinden bu altyazıyı tekrar seçmen yeterlidir!)', // Help text
+    errorHeader: 'KRİTİK HATA', // Error title
+    errorInstruction: 'Lütfen başka bir altyazı varyantını seçin veya videoyu yeniden başlatın.' // Error help text
+};
+
 // Global In-Memory Cache for Background Translations
 const translationCache = new Map();
 
@@ -51,10 +68,10 @@ builder.defineSubtitlesHandler(async function (args) {
             const translateUrl = `${host}/translate.srt?urls=${encodeURIComponent(JSON.stringify(fallbackUrls))}&key=${encodeURIComponent(geminiApiKey)}&vid=${sub.id || index}`;
 
             return {
-                id: `gemini-tur-${sub.id || index}`,
+                id: `gemini-${LANG_CONFIG.code}-${sub.id || index}`,
                 url: translateUrl,
-                lang: 'tur',
-                name: `[Gemini AI] TR: ${sub.id || 'Versiyon ' + (index + 1)}`
+                lang: LANG_CONFIG.code,
+                name: `[Gemini AI] ${LANG_CONFIG.label}: ${sub.id || 'Versiyon ' + (index + 1)}`
             };
         });
 
@@ -352,7 +369,7 @@ async function processBackgroundTranslation(urlArrayStr, uniqueKey, key) {
         // Modelin halüsinasyon (repetition loop) yaşamasını tamamen engelleyen Karakter Talimatı
         const model = genAI.getGenerativeModel({
             model: "gemini-2.5-flash",
-            systemInstruction: "Sen çok profesyonel ve resmi bir dublaj & altyazı çevirmenisin. Kullanıcı sana İngilizce bir SRT film altyazı dosyası gönderecektir. KESİNLİKLE tüm satırları EKSİKSİZ, doğal Türkçeye çevirmeli, hiçbir cümleyi atlamamalı ve asla aynı çeviriyi tekrar etmemelisin (her zaman orijinal metne sadık kal). Yalnızca SRT formatında dön."
+            systemInstruction: `Sen çok profesyonel ve resmi bir dublaj & altyazı çevirmenisin. Kullanıcı sana İngilizce bir SRT film altyazı dosyası gönderecektir. KESİNLİKLE tüm satırları EKSİKSİZ, ${LANG_CONFIG.aiInstruction}, hiçbir cümleyi atlamamalı ve asla aynı çeviriyi tekrar etmemelisin (her zaman orijinal metne sadık kal). Yalnızca SRT formatında dön.`
         });
 
         // SRT ayrıştırma ve süper-hızlı (Paralel) Chunklama sistemi kuruluyor:
@@ -392,7 +409,7 @@ async function processBackgroundTranslation(urlArrayStr, uniqueKey, key) {
             const chunk = subArray.slice(i, i + CHUNK_SIZE);
             const chunkSrt = parser.toSrt(chunk);
 
-            const prompt = "Aşağıdaki altyazı bloğunu eksiksiz Türkçeye çevir:\n\n" + chunkSrt;
+            const prompt = `${LANG_CONFIG.promptPrefix}\n\n` + chunkSrt;
 
             // Korumalı (Pro) hesap olduğu halde 503 engeline (Google Server Çökmesi) takılmamak için aralarına 800ms koyuyoruz
             const p = new Promise(resolve => setTimeout(resolve, chunkIndex * 800))
@@ -463,7 +480,7 @@ app.get('/translate.srt', (req, res) => {
     }
 
     if (cacheHit && cacheHit.status === 'error') {
-        const errorSrt = `1\r\n00:00:00,000 --> 01:00:00,000\r\n[Gemini AI] KRİTİK HATA:\r\n${cacheHit.error}\r\n\r\n2\r\n00:00:00,000 --> 01:00:00,000\r\nLütfen başka bir altyazı varyantını seçin\r\nveya videoyu yeniden başlatın.\r\n\r\n`;
+        const errorSrt = `1\r\n00:00:00,000 --> 01:00:00,000\r\n[Gemini AI] ${LANG_CONFIG.errorHeader}:\r\n${cacheHit.error}\r\n\r\n2\r\n00:00:00,000 --> 01:00:00,000\r\n${LANG_CONFIG.errorInstruction}\r\n\r\n`;
         res.setHeader('Content-Length', Buffer.byteLength(errorSrt, 'utf8'));
         return res.send(errorSrt);
     }
@@ -478,14 +495,14 @@ app.get('/translate.srt', (req, res) => {
     const total = cacheHit ? cacheHit.total : 0;
     const percent = total > 0 ? Math.round((progress / total) * 100) : 0;
 
-    let statusMsg = `Gemini AI şu an çeviriyor: %${percent} tamamlandı (${progress}/${total})`;
+    let statusMsg = `${LANG_CONFIG.translatingMsg}: %${percent} tamamlandı (${progress}/${total})`;
     if (percent === 100) {
-        statusMsg = "Çeviri Tamamlandı! Lütfen altyazıyı şimdi tekrar seçin.";
+        statusMsg = LANG_CONFIG.completedMsg;
     } else {
-        statusMsg += "\r\nGüncel durumu görmek için altyazıyı tekrar seçin!";
+        statusMsg += `\r\n${LANG_CONFIG.refreshMsg}`;
     }
 
-    const tempSrt = `1\r\n00:00:00,000 --> 01:01:00,000\r\n[Gemini AI] Çeviri Durumu:\r\n${statusMsg}\r\n\r\n2\r\n00:00:00,000 --> 01:01:00,000\r\n(İlerleme durduysa veya bittiyse: Stremio altyazı listesinden\r\nbu altyazıyı tekrar seçmen yeterlidir!)\r\n\r\n`;
+    const tempSrt = `1\r\n00:00:00,000 --> 01:01:00,000\r\n[Gemini AI] ${LANG_CONFIG.statusHeader}:\r\n${statusMsg}\r\n\r\n2\r\n00:00:00,000 --> 01:01:00,000\r\n${LANG_CONFIG.infoMsg}\r\n\r\n`;
 
     res.setHeader('Content-Length', Buffer.byteLength(tempSrt, 'utf8'));
     res.send(tempSrt);

@@ -29,6 +29,20 @@ You can use the live version or run it locally:
 2. **Wait & Refresh:** At first, you'll see a "Translation Status" message. Wait about 15-20 seconds.
 3. **Re-select:** Click on the same `[Gemini AI] TR` subtitle again to see the translated text!
 
+## 🌍 Customizing Target Language (Multi-Language Support)
+While I built this for **Turkish (TR)**, I've made it super easy for you to change it to any language you want! You don't need to hunt through the code anymore.
+
+Just open `index.js` and look for the **`LANG_CONFIG`** object at the very top (lines 9-23). 
+
+### What YOU MUST change for a new language:
+- **`code`**: The ISO code (e.g., `spa` for Spanish, `fra` for French).
+- **`label`**: The tag shown in Stremio (e.g., `ES`, `FR`).
+- **`aiInstruction`**: Tell Gemini which language to translate into.
+- **`promptPrefix`**: Update the prompt to the AI.
+
+### Optional (You don't *have* to change these):
+- You can also translate the status messages (`translatingMsg`, `completedMsg`, etc.) if you want the text on the screen to be in your language too, but the translation will work even if you leave them as they are!
+
 ## ⚠️ Notes
 - Since I'm using the Render Free plan, the addon might take about 30 seconds to "wake up" if it hasn't been used in a while.
 - This is purely experimental. If Gemini refuses to translate a specific file, just try selecting a different variant.

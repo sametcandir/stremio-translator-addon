@@ -73,59 +73,244 @@ const port = process.env.PORT || 7000;
 // Configuration Page
 app.get('/', (req, res) => {
     res.send(`
-        <html>
-            <head>
-                <title>Gemini Translator Kurulumu</title>
-                <style>
-                    body { font-family: Arial, sans-serif; background-color: #1a1a2e; color: #fff; text-align: center; padding: 50px; }
-                    input { padding: 10px; width: 300px; border-radius: 5px; border: none; margin-bottom: 20px; }
-                    button { padding: 10px 20px; background-color: #e94560; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold;}
-                    .container { max-width: 600px; margin: 0 auto; background: #16213e; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h1>Stremio Gemini AI Çevirmen</h1>
-                    <p>Google Gemini API Anahtarınızı girerek eklentiyi kurun. (Gemini 1.5 Flash ile ücretsiz hızlı çeviri sağlar.)</p>
-                    <input id="apiKey" type="text" placeholder="AIzaSy..."><br>
-                    <button onclick="install()">Stremio'da Kur</button>
-                    <button onclick="copyLink()" style="background-color: #4CAF50; margin-left:10px;">Bağlantıyı Kopyala</button>
-                    <p style="margin-top:20px; font-size: 12px; color: #aaa;">Google AI Studio üzerinden ücretsiz bir API key alabilirsiniz.</p>
+        <!DOCTYPE html>
+        <html lang="tr">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Gemini Translator - Stremio Addon</title>
+            <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+            <style>
+                :root {
+                    --primary: #6366f1;
+                    --secondary: #e94560;
+                    --bg: #0f172a;
+                    --card: rgba(30, 41, 59, 0.7);
+                    --glass: rgba(255, 255, 255, 0.03);
+                }
+
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                
+                body { 
+                    font-family: 'Outfit', sans-serif; 
+                    background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
+                    color: #f8fafc;
+                    min-height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 20px;
+                    overflow-x: hidden;
+                }
+
+                .bg-blobs {
+                    position: fixed;
+                    top: 0; left: 0; width: 100%; height: 100%;
+                    z-index: -1;
+                    overflow: hidden;
+                }
+
+                .blob {
+                    position: absolute;
+                    width: 400px; height: 400px;
+                    background: var(--primary);
+                    filter: blur(100px);
+                    border-radius: 50%;
+                    opacity: 0.15;
+                    animation: float 20s infinite alternate;
+                }
+
+                @keyframes float {
+                    from { transform: translate(0, 0); }
+                    to { transform: translate(100px, 100px); }
+                }
+
+                .container { 
+                    max-width: 500px; 
+                    width: 100%;
+                    background: var(--card);
+                    backdrop-filter: blur(20px);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    padding: 40px; 
+                    border-radius: 24px; 
+                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+                    text-align: center;
+                    animation: fadeIn 0.8s ease-out;
+                }
+
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(20px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+
+                .logo {
+                    font-size: 3rem;
+                    background: linear-gradient(to right, #818cf8, #c084fc);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    font-weight: 800;
+                    margin-bottom: 10px;
+                    letter-spacing: -1px;
+                }
+
+                h1 { font-size: 1.5rem; margin-bottom: 15px; font-weight: 600; color: #fff; }
+                p { color: #94a3b8; line-height: 1.6; margin-bottom: 30px; font-size: 0.95rem; }
+
+                .input-group {
+                    position: relative;
+                    margin-bottom: 25px;
+                }
+
+                input { 
+                    width: 100%;
+                    padding: 16px 20px; 
+                    background: rgba(15, 23, 42, 0.6);
+                    border: 2px solid rgba(255, 255, 255, 0.05);
+                    border-radius: 12px; 
+                    color: #fff;
+                    font-size: 1rem;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    font-family: inherit;
+                }
+
+                input:focus {
+                    outline: none;
+                    border-color: var(--primary);
+                    background: rgba(15, 23, 42, 0.8);
+                    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+                }
+
+                .btn-group {
+                    display: grid;
+                    grid-template-columns: 1fr;
+                    gap: 12px;
+                }
+
+                button { 
+                    position: relative;
+                    padding: 16px; 
+                    background: var(--primary);
+                    color: #fff; 
+                    border: none; 
+                    border-radius: 12px; 
+                    cursor: pointer; 
+                    font-size: 1rem; 
+                    font-weight: 600;
+                    transition: all 0.3s;
+                    overflow: hidden;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                }
+
+                button:hover {
+                    box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.4);
+                    transform: translateY(-2px);
+                }
+
+                button:active { transform: translateY(0); }
+
+                .btn-secondary {
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                }
+
+                .btn-secondary:hover {
+                    background: rgba(255, 255, 255, 0.1);
+                    box-shadow: none;
+                }
+
+                .footer {
+                    margin-top: 30px;
+                    padding-top: 20px;
+                    border-top: 1px solid rgba(255, 255, 255, 0.05);
+                }
+
+                .footer p { margin-bottom: 0; font-size: 0.8rem; }
+                
+                .footer a {
+                    color: var(--primary);
+                    text-decoration: none;
+                    transition: color 0.3s;
+                }
+
+                .footer a:hover { color: #818cf8; }
+
+                .badge {
+                    display: inline-block;
+                    padding: 4px 12px;
+                    background: rgba(99, 102, 241, 0.1);
+                    color: var(--primary);
+                    border-radius: 20px;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    margin-bottom: 10px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="bg-blobs">
+                <div class="blob" style="top: -10%; right: -10%;"></div>
+                <div class="blob" style="bottom: -10%; left: -10%; background: var(--secondary)"></div>
+            </div>
+
+            <div class="container">
+                <div class="badge">Gemini AI v2.5 Flash</div>
+                <div class="logo">Translate</div>
+                <h1>Stremio AI Çevirmen</h1>
+                <p>Google'ın en gelişmiş yapay zekasını kullanarak Stremio altyazılarını anlık olarak doğal Türkçeye çevirin.</p>
+                
+                <div class="input-group">
+                    <input id="apiKey" type="text" placeholder="Google Gemini API Key">
                 </div>
-                <script>
-                    function generateUrl() {
-                        const key = document.getElementById('apiKey').value;
-                        if(!key) {
-                            alert("Lütfen API Anahtarı girin!");
-                            return null;
-                        }
-                        const port = window.location.port ? ':' + window.location.port : '';
-                        // Explicitly construct string to ensure port is retained 
-                        // Stremio-addon-sdk getRouter parses config with JSON.parse
-                        const configObj = { geminiApiKey: key };
-                        const configPath = encodeURIComponent(JSON.stringify(configObj));
-                        const addonPath = window.location.host + '/' + configPath + '/manifest.json';
-                        return addonPath;
-                    }
 
-                    function install() {
-                        const path = generateUrl();
-                        if(path) {
-                            window.location.href = 'stremio://' + path;
-                        }
-                    }
+                <div class="btn-group">
+                    <button onclick="install()">
+                        <span>📥</span> Stremio'da Otomatik Kur
+                    </button>
+                    <button class="btn-secondary" onclick="copyLink()">
+                        <span>🔗</span> URL'yi Manuel Kopyala
+                    </button>
+                </div>
 
-                    function copyLink() {
-                        const path = generateUrl();
-                        if(path) {
-                            const fullUrl = 'http://' + path;
-                            navigator.clipboard.writeText(fullUrl).then(() => {
-                                alert("Bağlantı kopyalandı! Stremio'da Eklentiler sayfasına gidip arama çubuğuna yapıştırabilirsiniz.\\n\\nKopyalanan: " + fullUrl);
-                            });
-                        }
+                <div class="footer">
+                    <p>API Anahtarınız yok mu? <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio'dan Ücretsiz Alın</a></p>
+                </div>
+            </div>
+
+            <script>
+                function generateUrl() {
+                    const key = document.getElementById('apiKey').value.trim();
+                    if(!key) {
+                        alert("Lütfen geçerli bir API Anahtarı girin!");
+                        return null;
                     }
-                </script>
-            </body>
+                    const host = window.location.host;
+                    const configObj = { geminiApiKey: key };
+                    const configPath = encodeURIComponent(JSON.stringify(configObj));
+                    return host + '/' + configPath + '/manifest.json';
+                }
+
+                function install() {
+                    const path = generateUrl();
+                    if(path) {
+                        window.location.href = 'stremio://' + path;
+                    }
+                }
+
+                function copyLink() {
+                    const path = generateUrl();
+                    if(path) {
+                        const protocol = window.location.protocol;
+                        const fullUrl = protocol + '//' + path;
+                        navigator.clipboard.writeText(fullUrl).then(() => {
+                            alert("👉 Bağlantı Kopyalandı!\\n\\nStremio'da Eklentiler sayfasına gidin ve arama çubuğuna yapıştırıp Kur deyin.");
+                        });
+                    }
+                }
+            </script>
+        </body>
         </html>
     `);
 });
